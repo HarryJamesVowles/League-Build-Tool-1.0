@@ -1,11 +1,30 @@
 {
   "version": 3,
   "targets": {
-    "net8.0": {}
+    "net8.0": {
+      "LeagueBuildTool.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/LeagueBuildTool.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/LeagueBuildTool.Core.dll": {}
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "LeagueBuildTool.Core/1.0.0": {
+      "type": "project",
+      "path": "../LeagueBuildTool.Core/LeagueBuildTool.Core.csproj",
+      "msbuildProject": "../LeagueBuildTool.Core/LeagueBuildTool.Core.csproj"
+    }
+  },
   "projectFileDependencyGroups": {
-    "net8.0": []
+    "net8.0": [
+      "LeagueBuildTool.Core >= 1.0.0"
+    ]
   },
   "packageFolders": {
     "C:\\Users\\Harry\\.nuget\\packages\\": {}
@@ -31,7 +50,11 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.Core\\LeagueBuildTool.Core.csproj": {
+              "projectPath": "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.Core\\LeagueBuildTool.Core.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
