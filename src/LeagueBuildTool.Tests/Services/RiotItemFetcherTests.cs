@@ -2,12 +2,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using LeagueBuildTool.Core;
-using LeagueBuildTool.Core;
 
 namespace LeagueBuildTool.Tests.Services
 {
+    /// <summary>
+    /// Contains integration tests for the RiotItemFetcher service, verifying
+    /// its ability to fetch and parse item data from the Riot Games API.
+    /// </summary>
     public class RiotItemFetcherTests
     {
+        /// <summary>
+        /// Verifies that the GetAllItemsAsync method successfully fetches items from
+        /// the Riot Data Dragon API and that the returned list contains expected items.
+        /// Tests for non-null response, non-empty list, and presence of a known item.
+        /// </summary>
+        /// <returns>A Task representing the asynchronous test operation.</returns>
         [Fact(DisplayName = "Fetch all items from Riot and verify list is not empty")]
         public async Task GetAllItemsAsync_ShouldReturnItems()
         {
@@ -24,6 +33,12 @@ namespace LeagueBuildTool.Tests.Services
             Assert.Contains(items, i => i.Name == "Infinity Edge");
         }
 
+        /// <summary>
+        /// Verifies that the items fetched from the Riot API have valid properties.
+        /// Checks the first 5 items to ensure they have non-empty names and descriptions,
+        /// and non-negative costs.
+        /// </summary>
+        /// <returns>A Task representing the asynchronous test operation.</returns>
         [Fact(DisplayName = "Check fetched items have valid properties")]
         public async Task Items_ShouldHaveValidProperties()
         {

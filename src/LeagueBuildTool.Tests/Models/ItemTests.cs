@@ -3,8 +3,16 @@ using LeagueBuildTool.Core;
 
 namespace LeagueBuildTool.Tests.Models
 {
+    /// <summary>
+    /// Contains unit tests for the Item class, verifying its construction,
+    /// property initialization, and string representation functionality.
+    /// </summary>
     public class ItemTests
     {
+        /// <summary>
+        /// Verifies that the Item constructor correctly initializes all properties
+        /// when provided with valid parameters.
+        /// </summary>
         [Fact]
         public void Item_Constructor_InitializesCorrectly()
         {
@@ -22,6 +30,10 @@ namespace LeagueBuildTool.Tests.Models
             Assert.Equal(description, item.Description);
         }
 
+        /// <summary>
+        /// Verifies that the Item default constructor correctly initializes
+        /// all properties to their default values.
+        /// </summary>
         [Fact]
         public void Item_DefaultConstructor_InitializesWithDefaults()
         {
@@ -34,6 +46,10 @@ namespace LeagueBuildTool.Tests.Models
             Assert.Empty(item.Description);
         }
 
+        /// <summary>
+        /// Verifies that the ToString method returns a properly formatted string
+        /// containing the item's name, cost, and description.
+        /// </summary>
         [Fact]
         public void ToString_ReturnsFormattedString()
         {

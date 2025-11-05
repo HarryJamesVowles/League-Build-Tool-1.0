@@ -3,8 +3,16 @@ using LeagueBuildTool.Core;
 
 namespace LeagueBuildTool.Tests.Models
 {
+    /// <summary>
+    /// Contains unit tests for the Champion class, verifying its initialization
+    /// and item management functionality.
+    /// </summary>
     public class ChampionTests
     {
+        /// <summary>
+        /// Verifies that the Champion default constructor correctly initializes
+        /// all properties to their default values.
+        /// </summary>
         [Fact]
         public void Champion_DefaultConstructor_InitializesCorrectly()
         {
@@ -21,6 +29,10 @@ namespace LeagueBuildTool.Tests.Models
             Assert.Empty(champion.Build);
         }
 
+        /// <summary>
+        /// Verifies that the AddItemToBuild method correctly adds a new item
+        /// to the champion's build list.
+        /// </summary>
         [Fact]
         public void AddItemToBuild_AddsItemCorrectly()
         {
