@@ -78,11 +78,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.App\\LeagueBuildTool.App.csproj",
+      "projectUniqueName": "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.App\\LeagueBuildTool.App.csproj",
       "projectName": "LeagueBuildTool.App",
-      "projectPath": "c:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.App\\LeagueBuildTool.App.csproj",
+      "projectPath": "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.App\\LeagueBuildTool.App.csproj",
       "packagesPath": "C:\\Users\\Harry\\.nuget\\packages\\",
-      "outputPath": "c:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.App\\obj\\",
+      "outputPath": "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.App\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Harry\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -97,8 +97,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "c:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.Core\\LeagueBuildTool.Core.csproj": {
-              "projectPath": "c:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.Core\\LeagueBuildTool.Core.csproj"
+            "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.Core\\LeagueBuildTool.Core.csproj": {
+              "projectPath": "C:\\Users\\Harry\\Desktop\\League Build Tool 1.0\\src\\LeagueBuildTool.Core\\LeagueBuildTool.Core.csproj"
             }
           }
         }
