@@ -1,8 +1,10 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using LeagueBuildTool.Core.RiotChampionData;
 
 namespace LeagueBuildTool.Core
@@ -16,6 +18,9 @@ namespace LeagueBuildTool.Core
         private static readonly string url = "https://ddragon.leagueoflegends.com/cdn/13.18.1/data/en_US/champion.json";
         private static RiotChampionDataRoot? cachedRoot;
         private static readonly HttpClient client = new HttpClient();
+
+            // Limit concurrent per-champion detail requests to avoid hammering the CDN
+            private static readonly SemaphoreSlim detailFetchSemaphore = new SemaphoreSlim(8);
 
         private static async Task<RiotChampionDataRoot> GetRiotDataAsync()
         {
@@ -37,7 +42,9 @@ namespace LeagueBuildTool.Core
 
             if (root?.data != null)
             {
-                foreach (var entry in root.data.Values)
+                // We'll fetch per-champion detail JSON concurrently (bounded) to read authoritative 'partype'.
+                var entries = root.data.Values.ToList();
+                var tasks = entries.Select(async entry =>
                 {
                     var c = new Champion
                     {
@@ -51,35 +58,72 @@ namespace LeagueBuildTool.Core
                         c.Tags = entry.tags.ToList();
                     }
 
-                    // Map Riot stats to our canonical BaseStats keys when possible
+                    // Normalize Riot stats to canonical keys
                     if (entry.stats != null)
                     {
-                        // naive mapping: try to match common Riot keys to canonical keys
-                        var riotStats = entry.stats;
-                        foreach (var key in Champion.RequiredBaseStatKeys)
+                        var normalized = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var kv in entry.stats)
                         {
-                            // default 0
-                            c.BaseStats[key] = 0.0;
+                            var normKey = LeagueBuildTool.Core.Utils.StatMapper.NormalizeStatKey(kv.Key);
+                            if (normalized.ContainsKey(normKey)) normalized[normKey] += kv.Value;
+                            else normalized[normKey] = kv.Value;
                         }
 
-                        foreach (var kv in riotStats)
+                        // ensure required keys exist and fill from normalized dict or 0
+                        foreach (var key in Champion.RequiredBaseStatKeys)
                         {
-                            var rkey = kv.Key?.ToLowerInvariant() ?? string.Empty;
-                            if (rkey.Contains("hp")) c.BaseStats["Health"] = kv.Value;
-                            else if (rkey.Contains("attackdamage") || rkey.Contains("attack") && rkey.Contains("damage")) c.BaseStats["AttackDamage"] = kv.Value;
-                            else if (rkey.Contains("ap") || rkey.Contains("abilitypower") || rkey.Contains("spelldamage")) c.BaseStats["AbilityPower"] = kv.Value;
-                            else if (rkey.Contains("armor")) c.BaseStats["Armor"] = kv.Value;
-                            else if (rkey.Contains("spellblock") || rkey.Contains("mr")) c.BaseStats["MagicResist"] = kv.Value;
-                            else if (rkey.Contains("attackspeed")) c.BaseStats["AttackSpeed"] = kv.Value;
-                            else if (rkey.Contains("movespeed")) c.BaseStats["MoveSpeed"] = kv.Value;
-                            else if (rkey.Contains("hpregen")) c.BaseStats["HealthRegen"] = kv.Value;
-                            else if (rkey.Contains("mp")) c.BaseStats["Mana"] = kv.Value;
-                            else if (rkey.Contains("mpregen")) c.BaseStats["ManaRegen"] = kv.Value;
+                            c.BaseStats[key] = normalized.ContainsKey(key) ? normalized[key] : 0.0;
+                        }
+
+                        // derive tags based on normalized base stats
+                        var derived = LeagueBuildTool.Core.Utils.StatMapper.DeriveTagsFromStats(c.BaseStats);
+                        foreach (var t in derived)
+                        {
+                            if (!c.Tags.Contains(t)) c.Tags.Add(t);
+                        }
+
+                        // detect resource types from raw riot keys (fallback)
+                        var resourceTags = LeagueBuildTool.Core.Utils.StatMapper.DetectResourcesFromRawKeys(entry.stats.Keys);
+                        foreach (var rt in resourceTags)
+                        {
+                            if (!c.Tags.Contains(rt)) c.Tags.Add(rt);
                         }
                     }
 
-                    champions.Add(c);
-                }
+                    // Fetch detailed champion JSON to read the authoritative 'partype' field
+                    try
+                    {
+                        await detailFetchSemaphore.WaitAsync();
+                        var champId = entry.id ?? entry.name ?? string.Empty;
+                        if (!string.IsNullOrEmpty(champId))
+                        {
+                            // use the same version as the root to ensure compatibility
+                            var detailUrl = $"https://ddragon.leagueoflegends.com/cdn/{root.version}/data/en_US/champion/{champId}.json";
+                            var detailJson = await client.GetStringAsync(detailUrl);
+                            var jobj = JObject.Parse(detailJson);
+                            // path: data -> {champId} -> partype
+                            var partype = jobj["data"]?[champId]?["partype"]?.ToString();
+                            if (!string.IsNullOrWhiteSpace(partype))
+                            {
+                                var resourceTag = $"Resource:{partype}";
+                                if (!c.Tags.Contains(resourceTag)) c.Tags.Add(resourceTag);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // ignore per-champion fetch errors; we already have fallbacks
+                    }
+                    finally
+                    {
+                        detailFetchSemaphore.Release();
+                    }
+
+                    return c;
+                }).ToList();
+
+                var results = await Task.WhenAll(tasks);
+                champions.AddRange(results);
             }
 
             return champions;

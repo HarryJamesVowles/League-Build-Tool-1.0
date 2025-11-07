@@ -83,9 +83,16 @@ namespace LeagueBuildTool.Core
                     // copy stats dictionary if present
                     if (ri.stats != null)
                     {
-                        item.Stats = new Dictionary<string, double>(ri.stats);
-                        // derive tags from stat keys (simple heuristic)
-                        item.Tags = ri.stats.Keys.Select(k => k).ToList();
+                        // normalize Riot stat keys to canonical keys and aggregate values
+                        var normalized = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var kv in ri.stats)
+                        {
+                            var normKey = LeagueBuildTool.Core.Utils.StatMapper.NormalizeStatKey(kv.Key);
+                            if (normalized.ContainsKey(normKey)) normalized[normKey] += kv.Value;
+                            else normalized[normKey] = kv.Value;
+                        }
+                        item.Stats = normalized;
+                        item.Tags = LeagueBuildTool.Core.Utils.StatMapper.DeriveTagsFromStats(normalized);
                     }
 
                     items.Add(item);
