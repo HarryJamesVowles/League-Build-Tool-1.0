@@ -1,4 +1,5 @@
 using LeagueBuildTool.Core.ML;
+using LeagueBuildTool.Core.Configuration;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -12,8 +13,7 @@ namespace LeagueBuildTool.Core.Services
     public class HighEloMatchCollector
     {
         private readonly HttpClient _client;
-        private readonly string _apiKey;
-        private readonly string _region;
+        private readonly ApiConfiguration _config;
         private const string CHALLENGER_LEAGUE_URL = "https://{0}.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5";
         private const string MATCHES_BY_PUUID_URL = "https://{0}.api.riotgames.com/lol/match/v5/matches/by-puuid/{1}/ids";
         private const string MATCH_BY_ID_URL = "https://{0}.api.riotgames.com/lol/match/v5/matches/{1}";
@@ -23,12 +23,11 @@ namespace LeagueBuildTool.Core.Services
         /// </summary>
         public static readonly string[] HighEloRanks = new[] { "CHALLENGER", "GRANDMASTER", "MASTER", "DIAMOND" };
 
-        public HighEloMatchCollector(string apiKey, string region = "na1")
+        public HighEloMatchCollector(ApiConfiguration config)
         {
             _client = new HttpClient();
-            _apiKey = apiKey;
-            _region = region;
-            _client.DefaultRequestHeaders.Add("X-Riot-Token", apiKey);
+            _config = config;
+            _client.DefaultRequestHeaders.Add("X-Riot-Token", config.RiotApiKey);
         }
 
         /// <summary>
@@ -67,7 +66,7 @@ namespace LeagueBuildTool.Core.Services
 
         private async Task<List<(string summonerId, string puuid)>> GetChallengerPlayersAsync()
         {
-            var url = string.Format(CHALLENGER_LEAGUE_URL, _region);
+            var url = string.Format(CHALLENGER_LEAGUE_URL, _config.Region);
             var response = await _client.GetStringAsync(url);
             var leagueData = JsonConvert.DeserializeObject<dynamic>(response);
             var players = new List<(string, string)>();
@@ -87,7 +86,7 @@ namespace LeagueBuildTool.Core.Services
 
         private async Task<string> GetPuuidBySummonerIdAsync(string summonerId)
         {
-            var url = $"https://{_region}.api.riotgames.com/lol/summoner/v4/summoners/{summonerId}";
+            var url = $"https://{_config.Region}.api.riotgames.com/lol/summoner/v4/summoners/{summonerId}";
             var response = await _client.GetStringAsync(url);
             var summonerData = JsonConvert.DeserializeObject<dynamic>(response);
             return summonerData.puuid.ToString();
@@ -95,14 +94,14 @@ namespace LeagueBuildTool.Core.Services
 
         private async Task<List<string>> GetPlayerMatchesAsync(string puuid, int count)
         {
-            var url = string.Format(MATCHES_BY_PUUID_URL, _region, puuid) + $"?count={count}";
+            var url = string.Format(MATCHES_BY_PUUID_URL, _config.Region, puuid) + $"?count={count}";
             var response = await _client.GetStringAsync(url);
             return JsonConvert.DeserializeObject<List<string>>(response) ?? new List<string>();
         }
 
         private async Task<dynamic?> GetMatchDataAsync(string matchId)
         {
-            var url = string.Format(MATCH_BY_ID_URL, _region, matchId);
+            var url = string.Format(MATCH_BY_ID_URL, _config.Region, matchId);
             var response = await _client.GetStringAsync(url);
             return JsonConvert.DeserializeObject<dynamic>(response);
         }

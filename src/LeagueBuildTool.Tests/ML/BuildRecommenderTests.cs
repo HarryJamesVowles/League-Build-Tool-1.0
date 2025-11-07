@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using LeagueBuildTool.Core.ML;
 using LeagueBuildTool.Core.Services;
+using LeagueBuildTool.Core.Configuration;
 using System.Threading.Tasks;
 
 namespace LeagueBuildTool.Tests.ML
@@ -8,13 +9,18 @@ namespace LeagueBuildTool.Tests.ML
     [TestClass]
     public class BuildRecommenderTests
     {
-        private const string TEST_API_KEY = "YOUR-RIOT-API-KEY"; // Replace with actual key when testing
+        private static readonly ApiConfiguration _testConfig = new()
+        {
+            RiotApiKey = "RGAPI-7b5017c1-cdff-4745-9151-3de1c4054a92",
+            Region = "na1",
+            GameVersion = "13.18.1"
+        };
 
         [TestMethod]
         public async Task TrainModelOnHighEloData_ShouldCreateValidModel()
         {
             // Arrange
-            var collector = new HighEloMatchCollector(TEST_API_KEY);
+            var collector = new HighEloMatchCollector(_testConfig);
             var recommender = new BuildRecommender("test_model.zip");
 
             // Act
@@ -38,7 +44,7 @@ namespace LeagueBuildTool.Tests.ML
         public async Task CollectHighEloMatches_ShouldReturnValidData()
         {
             // Arrange
-            var collector = new HighEloMatchCollector(TEST_API_KEY);
+            var collector = new HighEloMatchCollector(_testConfig);
 
             // Act
             var matches = await collector.CollectHighEloMatchesAsync(10);
