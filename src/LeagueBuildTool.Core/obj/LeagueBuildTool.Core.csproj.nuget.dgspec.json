@@ -43,6 +43,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Microsoft.ML": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
+            "Microsoft.ML.FastTree": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.4, )"
