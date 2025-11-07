@@ -26,6 +26,18 @@ public class Item
     public string Description { get; set; }
 
     /// <summary>
+    /// A dictionary of stat keys to their numeric modifier values provided by this item.
+    /// Keys follow Riot's JSON stat names where possible (e.g. "FlatHPPoolMod", "FlatPhysicalDamageMod").
+    /// </summary>
+    public Dictionary<string, double> Stats { get; set; }
+
+    /// <summary>
+    /// A list of tags describing which stats or playstyles this item affects (e.g. "AD", "AP", "Tank").
+    /// Derived from the <see cref="Stats"/> keys when available.
+    /// </summary>
+    public List<string> Tags { get; set; }
+
+    /// <summary>
     /// Initializes a new Item with specified properties.
     /// </summary>
     /// <param name="name">The name of the item</param>
@@ -36,6 +48,8 @@ public class Item
         Name = name;
         Cost = cost;
         Description = description;
+        Stats = new Dictionary<string, double>();
+        Tags = new List<string>();
     }
 
     /// <summary>
@@ -47,6 +61,8 @@ public class Item
         Name = string.Empty;
         Cost = 0;
         Description = string.Empty;
+        Stats = new Dictionary<string, double>();
+        Tags = new List<string>();
     }
 
     /// <summary>

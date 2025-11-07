@@ -22,9 +22,13 @@ namespace LeagueBuildTool.Tests.Models
             // Assert
             Assert.Empty(champion.Name);
             Assert.Empty(champion.Lane);
-            Assert.Equal(0, champion.Health);
-            Assert.Equal(0, champion.AttackDamage);
-            Assert.Equal(0, champion.AbilityPower);
+            // Ensure BaseStats contains the required keys and defaults to 0
+            foreach (var key in Champion.RequiredBaseStatKeys)
+            {
+                Assert.True(champion.BaseStats.ContainsKey(key), $"Missing base stat key: {key}");
+                Assert.Equal(0.0, champion.BaseStats[key]);
+            }
+            Assert.Empty(champion.Tags);
             Assert.Equal(0, champion.Gold);
             Assert.Empty(champion.Build);
         }

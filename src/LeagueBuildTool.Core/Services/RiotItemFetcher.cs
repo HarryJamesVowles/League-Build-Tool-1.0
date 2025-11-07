@@ -78,7 +78,17 @@ namespace LeagueBuildTool.Core
                     string description = ri.plaintext ?? "No description available";
                     int cost = ri.gold?.total ?? 0;
 
-                    items.Add(new Item(name, cost, description));
+                    var item = new Item(name, cost, description);
+
+                    // copy stats dictionary if present
+                    if (ri.stats != null)
+                    {
+                        item.Stats = new Dictionary<string, double>(ri.stats);
+                        // derive tags from stat keys (simple heuristic)
+                        item.Tags = ri.stats.Keys.Select(k => k).ToList();
+                    }
+
+                    items.Add(item);
                 }
             }
 

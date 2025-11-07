@@ -44,6 +44,8 @@ namespace LeagueBuildTool.Tests.Models
             Assert.Empty(item.Name);
             Assert.Equal(0, item.Cost);
             Assert.Empty(item.Description);
+            Assert.NotNull(item.Stats);
+            Assert.NotNull(item.Tags);
         }
 
         /// <summary>
