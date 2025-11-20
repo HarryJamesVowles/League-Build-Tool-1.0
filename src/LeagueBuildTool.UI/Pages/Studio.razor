@@ -1,0 +1,131 @@
+@page "/studio"
+
+<PageTitle>Drag & Drop Studio</PageTitle>
+
+<section class="studio-intro">
+    <div>
+        <h1>Drag & Drop Studio</h1>
+        <p>
+            Prototype layouts by dragging palette blocks into the workspace. The live preview
+            updates as soon as you drop a block, making it easy to iterate visually.
+        </p>
+        <p class="studio-tip">
+            Tip: Use Visual Studio Hot Reload or `dotnet watch` to see these changes immediately
+            in the running app.
+        </p>
+    </div>
+    <div class="status-pill">Status: <strong>@statusMessage</strong></div>
+</section>
+
+<div class="studio-grid">
+    <section class="panel palette-panel">
+        <header>
+            <h2>Design Palette</h2>
+            <p>Drag any block to start building your layout.</p>
+        </header>
+        <div class="palette-items">
+            @foreach (var block in PaletteBlocks)
+            {
+                var dragging = draggedBlock?.SourceId == block.SourceId;
+                <article
+                    class="palette-block @(dragging ? "dragging" : null)"
+                    draggable="true"
+                    style="--accent:@block.Accent;"
+                    @ondragstart="e => BeginDrag(e, block)"
+                    @ondragend="EndDrag"
+                >
+                    <span class="block-category">@block.Category</span>
+                    <h3>@block.Title</h3>
+                    <p>@block.Description</p>
+                    <small>@block.Hint</small>
+                </article>
+            }
+        </div>
+    </section>
+
+    <section class="panel workspace-panel" @ondragover:preventDefault @ondrop:preventDefault @ondrop="HandleDrop">
+        <header>
+            <div>
+                <h2>Workspace</h2>
+                <p>Drop blocks here to compose the next build recommendation.</p>
+            </div>
+            <button class="btn-link" @onclick="ClearWorkspace">Clear workspace</button>
+        </header>
+
+        <div class="workspace-drop-zone">
+            @if (!workspace.Any())
+            {
+                <p class="workspace-placeholder">Nothing here yet. Drag a block from the palette.</p>
+            }
+            else
+            {
+                <div class="workspace-stack">
+                    @foreach (var slot in workspace)
+                    {
+                        <article class="workspace-card" @key="slot.InstanceId">
+                            <div class="card-heading">
+                                <span class="block-category">@slot.Source.Category</span>
+                                <button class="btn-link btn-inline" @onclick="() => RemoveBlock(slot)">Remove</button>
+                            </div>
+                            <h3>@slot.Source.Title</h3>
+                            <p>@slot.Source.Description</p>
+                        </article>
+                    }
+                </div>
+            }
+            <p class="workspace-hint">Drop-ready: @workspace.Count block(s)</p>
+        </div>
+    </section>
+</div>
+
+@code {
+    private readonly List<PaletteBlock> PaletteBlocks = new()
+    {
+        new("champion", "Champion Blueprint", "Core champion stats, hard counters, rune paths.", "Champion", "#6a5af9", "Drag to add a champion into the studio"),
+        new("items", "Item Progression", "Recommended item sequence tailored to the current match-up.", "Items", "#f99f3b", "Drop to preview recommended build slots"),
+        new("matchup", "Matchup Insight", "Strategy notes, lane routes, and power spikes.", "Strategy", "#3bbd90", "Use this for contextual storytelling"),
+        new("perk", "Perk Stack", "Situational keystones and boot upgrades.", "Perks", "#e04343", "Highlight the most impactful runes"),
+    };
+
+    private readonly List<WorkspaceSlot> workspace = new();
+    private PaletteBlock? draggedBlock;
+    private string statusMessage = "Drag a block from the palette to get started.";
+
+    private void BeginDrag(DragEventArgs args, PaletteBlock block)
+    {
+        draggedBlock = block;
+        statusMessage = $"Dragging '{block.Title}'";
+    }
+
+    private void EndDrag(DragEventArgs args)
+    {
+        draggedBlock = null;
+    }
+    private void HandleDrop(DragEventArgs args)
+    {
+        if (draggedBlock is null)
+        {
+            statusMessage = "Drop cancelled. Start a new drag from the palette.";
+            return;
+        }
+
+        workspace.Add(new WorkspaceSlot(draggedBlock, Guid.NewGuid()));
+        statusMessage = $"Added {draggedBlock.Title} to the workspace.";
+        draggedBlock = null;
+    }
+
+    private void ClearWorkspace()
+    {
+        workspace.Clear();
+        statusMessage = "Workspace cleared.";
+    }
+
+    private void RemoveBlock(WorkspaceSlot slot)
+    {
+        workspace.Remove(slot);
+        statusMessage = $"Removed {slot.Source.Title}.";
+    }
+
+    private record PaletteBlock(string SourceId, string Title, string Description, string Category, string Accent, string Hint);
+    private record WorkspaceSlot(PaletteBlock Source, Guid InstanceId);
+}

@@ -1,0 +1,44 @@
+feat: Add drag-and-drop studio with hot reload support
+
+COMPLETED SINCE LAST COMMIT (7c18245):
+- Added new Drag & Drop Studio page (/studio) for visual layout prototyping with palette blocks and workspace drop zone
+- Integrated drag-and-drop event handlers with live status message updates
+- Created design palette with 4 block types (Champion, Items, Matchup, Perks) as prototyping templates
+- Extended CSS styling with studio-specific classes for palette items, workspace zones, and responsive grid layout
+- Enabled Microsoft.AspNetCore.Components namespace in _Imports.razor to make PageTitle and NavLink components available
+- Added NavLink for /studio route in NavMenu for easy access to the new design studio
+- Updated README.md with UI Development Workflow section explaining dotnet watch and hot reload workflow
+- Blazor WebAssembly project builds successfully with no compilation errors
+- Studio.razor page compiles and is ready for hot reload testing in the browser
+
+NOT YET DONE (BLOCKING ISSUES - PICK UP HERE NEXT):
+
+1. Terminal/PowerShell Session Issue:
+   Previous attempts to format .gitignore via Python/PowerShell multiline commands caused terminal input to be echoed as code
+   WORKAROUND: Verify .gitignore manually - run: git show HEAD:.gitignore
+   If Ionide section missing, add via: echo ## Ionide >> .gitignore && echo .ionide/ >> .gitignore && echo Ionide.* >> .gitignore
+
+2. Nested Git Repository Structure:
+   Two repos detected: outer at root and inner at League-Build-Tool-1.0/
+   ACTION: Clarify primary repository structure; may need to consolidate or adjust workflow
+   Current status: Working from outer repo (c:\Users\Harry\Desktop\League Build Tool 1.0)
+
+3. MAUI Integration Not Yet Complete:
+   Current UI project is Blazor WebAssembly only, not MAUI hybrid
+   NEXT STEP: Either create new MAUI shell project (dotnet new maui-blazor) or update existing LeagueBuildTool.UI to MAUI Blazor hybrid
+   This is needed for native desktop packaging (Windows/Mac)
+
+4. IDE Warnings in NavMenu.razor:
+   NavLink and other components still report namespace errors despite @using directives in Layout
+   POSSIBLE FIX: May require explicit @using Microsoft.AspNetCore.Components.Routing in component itself, not just _Imports
+
+CURRENT FILES MODIFIED:
+- .gitignore (Ionide entries - may need manual verification/re-add due to shell issue)
+- src/LeagueBuildTool.UI/Pages/Studio.razor (NEW - drag-and-drop demo page)
+- src/LeagueBuildTool.UI/Layout/NavMenu.razor (added Studio link)
+- src/LeagueBuildTool.UI/_Imports.razor (added Microsoft.AspNetCore.Components using)
+- src/LeagueBuildTool.UI/wwwroot/css/app.css (added studio styles)
+
+READY FOR TESTING:
+Run: cd src/LeagueBuildTool.UI && dotnet watch run
+Then navigate to http://localhost:port/studio to see the drag-and-drop design studio in action
