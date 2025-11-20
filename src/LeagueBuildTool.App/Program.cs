@@ -15,8 +15,11 @@ using LeagueBuildTool.Core.Services;
 var host = Host.CreateDefaultBuilder(args)
 	.ConfigureAppConfiguration((context, config) =>
 	{
+		// Get the directory where the executable is located
+		var appDirectory = AppContext.BaseDirectory;
+		
 		// Add configuration sources in order of priority
-		config.SetBasePath(Directory.GetCurrentDirectory())
+		config.SetBasePath(appDirectory)
 			.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
 			.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: true)
 			.AddEnvironmentVariables()
