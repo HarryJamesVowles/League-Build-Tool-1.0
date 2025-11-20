@@ -32,7 +32,16 @@ namespace LeagueBuildTool.Core.Services.BuildProviders
         /// <param name="championName">Name of the champion</param>
         /// <param name="opponentName">Name of the opponent champion</param>
         /// <param name="role">Role/position (can be null for all roles)</param>
-        /// <returns>List of build recommendations</returns>
-        Task<List<BuildRecommendation.BuildRecommendation>> GetCounterBuildRecommendationsAsync(string championName, string opponentName, string? role = null);
-    }
-}
+                /// <returns>List of build recommendations</returns>
+                Task<List<BuildRecommendation.BuildRecommendation>> GetCounterBuildRecommendationsAsync(string championName, string opponentName, string? role = null);
+        
+                /// <summary>
+                /// Gets build recommendations for a live game for a specific summoner
+                /// </summary>
+                /// <param name="region">The region of the summoner</param>
+                /// <param name="summonerName">The name of the summoner</param>
+                /// <returns>List of build recommendations</returns>
+                Task<List<BuildRecommendation.BuildRecommendation>> GetLiveGameBuildRecommendationsAsync(string region, string summonerName);
+            }
+        }
+        
