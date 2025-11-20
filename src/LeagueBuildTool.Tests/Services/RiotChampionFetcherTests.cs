@@ -1,8 +1,10 @@
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
 using Assert = Xunit.Assert;
 using LeagueBuildTool.Core;
+using LeagueBuildTool.Core.Configuration;
 
 namespace LeagueBuildTool.Tests.Services
 {
@@ -12,10 +14,19 @@ namespace LeagueBuildTool.Tests.Services
     /// </summary>
     public class RiotChampionFetcherTests
     {
+        private readonly RiotChampionFetcher _fetcher;
+
+        public RiotChampionFetcherTests()
+        {
+            var config = new RiotApiConfiguration();
+            var httpClient = new HttpClient();
+            _fetcher = new RiotChampionFetcher(config, httpClient);
+        }
+
         [Fact(DisplayName = "Fetch all champions from Riot and verify list is not empty")]
         public async Task GetAllChampionsAsync_ShouldReturnChampions()
         {
-            var champions = await RiotChampionFetcher.GetAllChampionsAsync();
+            var champions = await _fetcher.GetAllChampionsAsync();
 
             Assert.NotNull(champions);
             Assert.True(champions.Count > 0, "No champions were fetched from Riot");

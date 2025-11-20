@@ -1,8 +1,10 @@
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
 using Assert = Xunit.Assert;
 using LeagueBuildTool.Core;
+using LeagueBuildTool.Core.Configuration;
 
 namespace LeagueBuildTool.Tests.Services
 {
@@ -12,6 +14,14 @@ namespace LeagueBuildTool.Tests.Services
     /// </summary>
     public class RiotItemFetcherTests
     {
+        private readonly RiotItemFetcher _fetcher;
+
+        public RiotItemFetcherTests()
+        {
+            var config = new RiotApiConfiguration();
+            var httpClient = new HttpClient();
+            _fetcher = new RiotItemFetcher(config, httpClient);
+        }
         /// <summary>
         /// Verifies that the GetAllItemsAsync method successfully fetches items from
         /// the Riot Data Dragon API and that the returned list contains expected items.
@@ -22,7 +32,7 @@ namespace LeagueBuildTool.Tests.Services
         public async Task GetAllItemsAsync_ShouldReturnItems()
         {
             // Act: fetch items from Riot Data Dragon
-            var items = await RiotItemFetcher.GetAllItemsAsync();
+            var items = await _fetcher.GetAllItemsAsync();
 
             // Assert: list should not be null
             Assert.NotNull(items);
@@ -43,7 +53,7 @@ namespace LeagueBuildTool.Tests.Services
         [Fact(DisplayName = "Check fetched items have valid properties")]
         public async Task Items_ShouldHaveValidProperties()
         {
-            var items = await RiotItemFetcher.GetAllItemsAsync();
+            var items = await _fetcher.GetAllItemsAsync();
 
             // Check first 5 items for valid properties
             foreach (var item in items.Take(5))

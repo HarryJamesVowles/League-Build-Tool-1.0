@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using LeagueBuildTool.Core.RiotItemData;
+using LeagueBuildTool.Core.Configuration;
 
 namespace LeagueBuildTool.Core
 {
@@ -13,22 +14,15 @@ namespace LeagueBuildTool.Core
     /// </summary>
     public class RiotItemFetcher
     {
-        /// <summary>
-        /// The base URL for fetching item data from Riot's Data Dragon CDN.
-        /// Version 13.18.1 is used for consistency in item data.
-        /// </summary>
-        private static readonly string url = "https://ddragon.leagueoflegends.com/cdn/13.18.1/data/en_US/item.json";
+        private readonly RiotApiConfiguration _config;
+        private readonly HttpClient _client;
+        private RiotItemDataRoot? _cachedRoot;
 
-        /// <summary>
-        /// Cached item data to minimize API calls. Data is loaded on first request and reused.
-        /// </summary>
-        private static RiotItemDataRoot? cachedRoot;
-
-        /// <summary>
-        /// Shared HttpClient instance for making API requests.
-        /// Static to properly manage connections and prevent socket exhaustion.
-        /// </summary>
-        private static readonly HttpClient client = new HttpClient();
+        public RiotItemFetcher(RiotApiConfiguration config, HttpClient client)
+        {
+            _config = config;
+            _client = client;
+        }
 
         /// <summary>
         /// Retrieves and caches the complete item dataset from Riot's API.
@@ -36,14 +30,14 @@ namespace LeagueBuildTool.Core
         /// </summary>
         /// <returns>A RiotItemDataRoot object containing all item data</returns>
         /// <exception cref="JsonException">Thrown when item data cannot be deserialized</exception>
-        private static async Task<RiotItemDataRoot> GetRiotDataAsync()
+        private async Task<RiotItemDataRoot> GetRiotDataAsync()
         {
-            if (cachedRoot != null)
-                return cachedRoot;
+            if (_cachedRoot != null)
+                return _cachedRoot;
 
-            string json = await client.GetStringAsync(url);
-            cachedRoot = JsonConvert.DeserializeObject<RiotItemDataRoot>(json);
-            return cachedRoot ?? throw new JsonException("Failed to deserialize Riot item data");
+            string json = await _client.GetStringAsync(_config.GetItemListUrl());
+            _cachedRoot = JsonConvert.DeserializeObject<RiotItemDataRoot>(json);
+            return _cachedRoot ?? throw new JsonException("Failed to deserialize Riot item data");
         }
 
         /// <summary>
@@ -51,7 +45,7 @@ namespace LeagueBuildTool.Core
         /// </summary>
         /// <param name="itemName">The exact name of the item to look up</param>
         /// <returns>A RiotItem object containing detailed item information, or null if not found</returns>
-        public static async Task<RiotItem?> GetRiotItemDetailsAsync(string itemName)
+        public async Task<RiotItem?> GetRiotItemDetailsAsync(string itemName)
         {
             var root = await GetRiotDataAsync();
             return root.data.Values.FirstOrDefault(item => item.name == itemName);
@@ -62,7 +56,7 @@ namespace LeagueBuildTool.Core
         /// to our internal Item representation. Handles null values and missing data gracefully.
         /// </summary>
         /// <returns>A list of Item objects containing basic information about all available items</returns>
-        public static async Task<List<Item>> GetAllItemsAsync()
+        public async Task<List<Item>> GetAllItemsAsync()
         {
             var root = await GetRiotDataAsync();
             List<Item> items = new List<Item>();

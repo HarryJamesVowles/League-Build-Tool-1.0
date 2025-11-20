@@ -2,24 +2,55 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using LeagueBuildTool.Core;
 using LeagueBuildTool.Core.Configuration;
 using LeagueBuildTool.Core.Services;
-// Entry point for League Build Tool sample runner
 
-// Small sample runner for inspecting champions and items from Riot Data Dragon.
-// Used for local inspection and normalization rule design.
+// Entry point for League Build Tool with dependency injection and configuration
 
-// Run the sample inspection asynchronously
-await RunSampleAsync();
+// Build host with configuration and services
+var host = Host.CreateDefaultBuilder(args)
+	.ConfigureAppConfiguration((context, config) =>
+	{
+		// Add configuration sources in order of priority
+		config.SetBasePath(Directory.GetCurrentDirectory())
+			.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+			.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+			.AddEnvironmentVariables()
+			.AddUserSecrets<Program>(optional: true);
+	})
+	.ConfigureServices((context, services) =>
+	{
+		// Bind RiotApi configuration section
+		var riotConfig = context.Configuration.GetSection("RiotApi").Get<RiotApiConfiguration>() 
+			?? new RiotApiConfiguration();
+		
+		// Register configuration as singleton
+		services.AddSingleton(riotConfig);
+		
+		// Register HttpClient
+		services.AddHttpClient<RiotChampionFetcher>();
+		services.AddHttpClient<RiotItemFetcher>();
+	})
+	.Build();
 
-async Task RunSampleAsync()
+// Run the sample inspection
+await RunSampleAsync(host.Services);
+
+async Task RunSampleAsync(IServiceProvider services)
 {
 	try
 	{
+		// Get services from DI container
+		var championFetcher = services.GetRequiredService<RiotChampionFetcher>();
+		var itemFetcher = services.GetRequiredService<RiotItemFetcher>();
+		
 		// Fetch sample champions from Riot API
 		Console.WriteLine("Fetching sample champions...");
-		var champs = await RiotChampionFetcher.GetAllChampionsAsync();
+		var champs = await championFetcher.GetAllChampionsAsync();
 		Console.WriteLine($"Total champions fetched: {champs.Count}");
 
 		// Aggregate stats and tags for champions
@@ -69,7 +100,7 @@ async Task RunSampleAsync()
 
 		// Fetch sample items from Riot API
 		Console.WriteLine("\nFetching sample items...");
-		var items = await RiotItemFetcher.GetAllItemsAsync();
+		var items = await itemFetcher.GetAllItemsAsync();
 		Console.WriteLine($"Total items fetched: {items.Count}");
 		foreach (var it in items.Take(5))
 		{

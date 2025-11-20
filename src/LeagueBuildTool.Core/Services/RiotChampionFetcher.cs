@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using LeagueBuildTool.Core.RiotChampionData;
 using LeagueBuildTool.Core.Data;
+using LeagueBuildTool.Core.Configuration;
 
 namespace LeagueBuildTool.Core
 {
@@ -16,22 +17,25 @@ namespace LeagueBuildTool.Core
     /// </summary>
     public class RiotChampionFetcher
     {
-        private static readonly string version = "13.18.1";
-        private static readonly string baseUrl = $"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US";
-        private static readonly string championListUrl = $"{baseUrl}/champion.json";
-        private static RiotChampionDataRoot? cachedRoot;
-        private static readonly Dictionary<string, ChampionDetail> cachedDetails = new();
-        private static readonly HttpClient client = new HttpClient();
+        private readonly RiotApiConfiguration _config;
+        private readonly HttpClient _client;
+        private readonly SemaphoreSlim _detailFetchSemaphore;
+        private RiotChampionDataRoot? _cachedRoot;
+        private readonly Dictionary<string, ChampionDetail> _cachedDetails = new();
 
-            // Limit concurrent per-champion detail requests to avoid hammering the CDN
-            private static readonly SemaphoreSlim detailFetchSemaphore = new SemaphoreSlim(8);
-
-        private static async Task<RiotChampionDataRoot> GetRiotDataAsync()
+        public RiotChampionFetcher(RiotApiConfiguration config, HttpClient client)
         {
-            if (cachedRoot != null) return cachedRoot;
-            string json = await client.GetStringAsync(championListUrl);
-            cachedRoot = JsonConvert.DeserializeObject<RiotChampionDataRoot>(json);
-            return cachedRoot ?? throw new JsonException("Failed to deserialize Riot champion data");
+            _config = config;
+            _client = client;
+            _detailFetchSemaphore = new SemaphoreSlim(_config.MaxConcurrentRequests);
+        }
+
+        private async Task<RiotChampionDataRoot> GetRiotDataAsync()
+        {
+            if (_cachedRoot != null) return _cachedRoot;
+            string json = await _client.GetStringAsync(_config.GetChampionListUrl());
+            _cachedRoot = JsonConvert.DeserializeObject<RiotChampionDataRoot>(json);
+            return _cachedRoot ?? throw new JsonException("Failed to deserialize Riot champion data");
         }
 
         /// <summary>
@@ -39,7 +43,7 @@ namespace LeagueBuildTool.Core
         /// Ensures each Champion has the canonical BaseStats keys present.
         /// </summary>
         /// <returns>List of Champion objects</returns>
-        public static async Task<List<Champion>> GetAllChampionsAsync()
+        public async Task<List<Champion>> GetAllChampionsAsync()
         {
             var root = await GetRiotDataAsync();
             List<Champion> champions = new List<Champion>();
@@ -97,13 +101,12 @@ namespace LeagueBuildTool.Core
                     // Fetch detailed champion JSON to read the authoritative 'partype' field
                     try
                     {
-                        await detailFetchSemaphore.WaitAsync();
+                        await _detailFetchSemaphore.WaitAsync();
                         var champId = entry.id ?? entry.name ?? string.Empty;
                         if (!string.IsNullOrEmpty(champId))
                         {
-                            // use the same version as the root to ensure compatibility
-                            var detailUrl = $"https://ddragon.leagueoflegends.com/cdn/{root.version}/data/en_US/champion/{champId}.json";
-                            var detailJson = await client.GetStringAsync(detailUrl);
+                            var detailUrl = _config.GetChampionDetailUrl(champId);
+                            var detailJson = await _client.GetStringAsync(detailUrl);
                             var jobj = JObject.Parse(detailJson);
                             // path: data -> {champId} -> partype
                             var partype = jobj["data"]?[champId]?["partype"]?.ToString();
@@ -120,7 +123,7 @@ namespace LeagueBuildTool.Core
                     }
                     finally
                     {
-                        detailFetchSemaphore.Release();
+                        _detailFetchSemaphore.Release();
                     }
 
                     return c;
@@ -138,7 +141,7 @@ namespace LeagueBuildTool.Core
         /// This method is optimized for quickly loading basic champion information without detailed data.
         /// </summary>
         /// <returns>Dictionary of champion name to Champion object with basic stats</returns>
-        public static async Task<Dictionary<string, Champion>> GetBasicChampionDataAsync()
+        public async Task<Dictionary<string, Champion>> GetBasicChampionDataAsync()
         {
             var root = await GetRiotDataAsync();
             var champions = new Dictionary<string, Champion>(StringComparer.OrdinalIgnoreCase);
@@ -187,7 +190,7 @@ namespace LeagueBuildTool.Core
         /// </summary>
         /// <param name="championNames">List of champion names to load details for (max 10 for a typical game)</param>
         /// <returns>Dictionary of champion name to their detailed information</returns>
-        public static async Task<Dictionary<string, ChampionDetail>> LoadChampionDetailsAsync(IEnumerable<string> championNames)
+        public async Task<Dictionary<string, ChampionDetail>> LoadChampionDetailsAsync(IEnumerable<string> championNames)
         {
             var root = await GetRiotDataAsync();
             var details = new Dictionary<string, ChampionDetail>();
@@ -204,14 +207,14 @@ namespace LeagueBuildTool.Core
             var tasks = championsToLoad.Select(async championName =>
             {
                 // Check cache first
-                if (cachedDetails.TryGetValue(championName, out var cachedDetail))
+                if (_cachedDetails.TryGetValue(championName, out var cachedDetail))
                 {
                     return (championName, cachedDetail);
                 }
 
                 try
                 {
-                    await detailFetchSemaphore.WaitAsync();
+                    await _detailFetchSemaphore.WaitAsync();
                     
                     // Find the champion ID from our cached root data
                     var champId = root?.data?.Values
@@ -222,8 +225,8 @@ namespace LeagueBuildTool.Core
                         throw new KeyNotFoundException($"Champion '{championName}' not found in basic data");
                     }
 
-                    var detailUrl = $"{baseUrl}/champion/{champId}.json";
-                    var detailJson = await client.GetStringAsync(detailUrl);
+                    var detailUrl = _config.GetChampionDetailUrl(champId);
+                    var detailJson = await _client.GetStringAsync(detailUrl);
                     var jobj = JObject.Parse(detailJson);
                     var champData = jobj["data"]?[champId];
 
@@ -255,12 +258,12 @@ namespace LeagueBuildTool.Core
                     }
 
                     // Cache the result
-                    cachedDetails[championName] = detail;
+                    _cachedDetails[championName] = detail;
                     return (championName, detail);
                 }
                 finally
                 {
-                    detailFetchSemaphore.Release();
+                    _detailFetchSemaphore.Release();
                 }
             });
 

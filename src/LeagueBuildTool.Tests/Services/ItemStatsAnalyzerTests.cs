@@ -1,27 +1,33 @@
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
 using Assert = Xunit.Assert;
 using Xunit.Abstractions;
 using LeagueBuildTool.Core;
+using LeagueBuildTool.Core.Configuration;
 
 namespace LeagueBuildTool.Tests.Services
 {
     public class ItemStatsAnalyzerTests
     {
         private readonly ITestOutputHelper _output;
+        private readonly RiotItemFetcher _fetcher;
 
         public ItemStatsAnalyzerTests(ITestOutputHelper output)
         {
             _output = output;
+            var config = new RiotApiConfiguration();
+            var httpClient = new HttpClient();
+            _fetcher = new RiotItemFetcher(config, httpClient);
         }
 
         [Fact(DisplayName = "Analyze available item stats from Riot API")]
         public async Task AnalyzeItemStats_ShowsAvailableStats()
         {
             // Arrange & Act
-            var items = await RiotItemFetcher.GetAllItemsAsync();
+            var items = await _fetcher.GetAllItemsAsync();
             var allStats = new HashSet<string>();
             var itemsWithStats = new Dictionary<string, Dictionary<string, double>>();
             var statExamples = new Dictionary<string, List<(string itemName, double value)>>();
@@ -29,7 +35,7 @@ namespace LeagueBuildTool.Tests.Services
             // Find items with stats and collect all unique stat types
             foreach (var item in items) // Look at all items
             {
-                var riotItem = await RiotItemFetcher.GetRiotItemDetailsAsync(item.Name);
+                var riotItem = await _fetcher.GetRiotItemDetailsAsync(item.Name);
                 if (riotItem?.stats != null && riotItem.stats.Any())
                 {
                     itemsWithStats[item.Name] = riotItem.stats;
