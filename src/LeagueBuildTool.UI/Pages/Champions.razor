@@ -1,0 +1,74 @@
+@page "/champions"
+@using Microsoft.AspNetCore.Components
+@using LeagueBuildTool.Core
+
+<PageTitle>Champions</PageTitle>
+
+<div class="champions-layout">
+    <!-- Left Navigation Bar -->
+    <div class="left-nav-bar">
+        <div class="nav-header">Champions</div>
+        <input type="text" class="search-bar" placeholder="Search champions..." />
+        <div class="filters-section">
+            <p style="margin-bottom: 1rem;">Filters</p>
+            <!-- Filters will go here -->
+        </div>
+    </div>
+
+    <!-- Champions Grid -->
+    <div class="champions-content">
+        @if (champions == null)
+        {
+            <p>Loading champions...</p>
+        }
+        else if (champions.Count == 0)
+        {
+            <p>No champions found.</p>
+        }
+        else
+        {
+            @foreach (var champion in champions)
+            {
+                <div class="champion-card" @key="champion.Name">
+                    <div class="champion-image-box">@champion.Name.Substring(0, 1)</div>
+                    <div class="champion-name">@champion.Name</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<Champion>? champions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        champions = new List<Champion>
+        {
+            new Champion { Name = "Aatrox", Lane = "Top" },
+            new Champion { Name = "Ahri", Lane = "Mid" },
+            new Champion { Name = "Akali", Lane = "Mid" },
+            new Champion { Name = "Alistar", Lane = "Support" },
+            new Champion { Name = "Amumu", Lane = "Jungle" },
+            new Champion { Name = "Anivia", Lane = "Mid" },
+            new Champion { Name = "Annie", Lane = "Mid" },
+            new Champion { Name = "Aphelios", Lane = "ADC" },
+            new Champion { Name = "Ashe", Lane = "ADC" },
+            new Champion { Name = "Azir", Lane = "Mid" },
+            new Champion { Name = "Bard", Lane = "Support" },
+            new Champion { Name = "Blitzcrank", Lane = "Support" },
+            new Champion { Name = "Brand", Lane = "Support" },
+            new Champion { Name = "Braum", Lane = "Support" },
+            new Champion { Name = "Caitlyn", Lane = "ADC" },
+            new Champion { Name = "Camille", Lane = "Top" },
+            new Champion { Name = "Cassiopeia", Lane = "Mid" },
+            new Champion { Name = "Cho'Gath", Lane = "Top" },
+            new Champion { Name = "Corki", Lane = "ADC" },
+            new Champion { Name = "Darius", Lane = "Top" },
+        };
+
+        await Task.CompletedTask;
+    }
+}
+
+
