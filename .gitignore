@@ -33,3 +33,7 @@ artifacts/
 ## Rider
 .idea/
 *.sln.iml
+
+## Ionide
+.ionide/
+Ionide.*
