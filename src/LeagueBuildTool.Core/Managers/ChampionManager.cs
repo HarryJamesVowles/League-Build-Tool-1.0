@@ -39,7 +39,7 @@ namespace LeagueBuildTool.Core
         /// </summary>
         /// <param name="name">The name of the champion to find.</param>
         /// <returns>The champion with the specified name, or null if no champion is found.</returns>
-        public Champion GetChampionByName(string name)
+        public Champion? GetChampionByName(string name)
         {
             return Champions.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
