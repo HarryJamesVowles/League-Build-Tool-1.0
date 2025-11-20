@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Assert = Xunit.Assert;
 using Xunit.Abstractions;
 using LeagueBuildTool.Core;
 

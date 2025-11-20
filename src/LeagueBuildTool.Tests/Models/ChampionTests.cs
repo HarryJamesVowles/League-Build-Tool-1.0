@@ -1,4 +1,5 @@
 using Xunit;
+using Assert = Xunit.Assert;
 using LeagueBuildTool.Core;
 
 namespace LeagueBuildTool.Tests.Models

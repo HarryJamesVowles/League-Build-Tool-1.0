@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LeagueBuildTool.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+75a990ed9b618e150f845cf1f5586ac16634c76a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4f0f3ac657e4437d3f360a565b111029154421b1")]
 [assembly: System.Reflection.AssemblyProductAttribute("LeagueBuildTool.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LeagueBuildTool.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

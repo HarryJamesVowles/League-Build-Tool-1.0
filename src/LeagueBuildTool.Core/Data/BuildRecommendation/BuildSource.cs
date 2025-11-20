@@ -15,9 +15,14 @@ namespace LeagueBuildTool.Core.Data.BuildRecommendation
         /// </summary>
         OPGG,
 
-        /// <summary>
-        /// Build recommendation from Riot's recommended items
-        /// </summary>
-        RiotRecommended
+    /// <summary>
+    /// Build recommendation from Riot's recommended items
+    /// </summary>
+    RiotRecommended,
+
+    /// <summary>
+    /// Build recommendation from a live game
+    /// </summary>
+    LiveGame
     }
 }

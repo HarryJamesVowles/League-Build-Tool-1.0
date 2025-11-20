@@ -1,4 +1,5 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
+using Assert = Xunit.Assert;
 using LeagueBuildTool.Core.ML;
 using LeagueBuildTool.Core.Services;
 using LeagueBuildTool.Core.Configuration;
@@ -6,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace LeagueBuildTool.Tests.ML
 {
-    [TestClass]
     public class BuildRecommenderTests
     {
         private static readonly ApiConfiguration _testConfig = new()
@@ -16,7 +16,7 @@ namespace LeagueBuildTool.Tests.ML
             GameVersion = "13.18.1"
         };
 
-        [TestMethod]
+        [Fact]
         public async Task TrainModelOnHighEloData_ShouldCreateValidModel()
         {
             // Arrange
@@ -37,10 +37,10 @@ namespace LeagueBuildTool.Tests.ML
             };
 
             var prediction = recommender.PredictBuildSuccess(testFeatures);
-            Assert.IsTrue(prediction >= 0 && prediction <= 1, "Prediction should be a probability between 0 and 1");
+        Assert.True(prediction >= 0 && prediction <= 1, "Prediction should be a probability between 0 and 1");
         }
 
-        [TestMethod]
+        [Fact]
         public async Task CollectHighEloMatches_ShouldReturnValidData()
         {
             // Arrange
@@ -50,13 +50,13 @@ namespace LeagueBuildTool.Tests.ML
             var matches = await collector.CollectHighEloMatchesAsync(10);
 
             // Assert
-            Assert.IsNotNull(matches);
-            Assert.IsTrue(matches.Count > 0, "Should collect at least one match");
-            Assert.IsTrue(matches.All(m => !string.IsNullOrEmpty(m.MatchId)), "All matches should have an ID");
-            Assert.IsTrue(matches.All(m => !string.IsNullOrEmpty(m.ChampionName)), "All matches should have a champion name");
+            Assert.NotNull(matches);
+            Assert.True(matches.Count > 0, "Should collect at least one match");
+            Assert.All(matches, m => Assert.False(string.IsNullOrEmpty(m.MatchId)));
+            Assert.All(matches, m => Assert.False(string.IsNullOrEmpty(m.Features.ChampionName)));
         }
 
-        [TestMethod]
+        [Fact]
         public void BuildRecommender_ShouldHandleEdgeCases()
         {
             // Arrange
@@ -71,8 +71,7 @@ namespace LeagueBuildTool.Tests.ML
                 GameTime = 0        // Game just started
             };
 
-            Assert.ThrowsException<InvalidOperationException>(() => recommender.PredictBuildSuccess(features),
-                "Should throw when model is not trained");
+            Assert.Throws<InvalidOperationException>(() => recommender.PredictBuildSuccess(features));
         }
     }
 }

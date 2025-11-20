@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using LeagueBuildTool.Core.Data;
+using LeagueBuildTool.Core.Data.BuildRecommendation;
 
 namespace LeagueBuildTool.Core.Services.BuildProviders
 {
@@ -12,7 +12,7 @@ namespace LeagueBuildTool.Core.Services.BuildProviders
             _liveGameFetcher = liveGameFetcher;
         }
 
-        public BuildRecommendation.BuildSource Source => BuildRecommendation.BuildSource.LiveGame;
+        public BuildSource Source => BuildSource.LiveGame;
 
         public Task<string> GetCurrentPatchVersionAsync()
         {
@@ -20,15 +20,21 @@ namespace LeagueBuildTool.Core.Services.BuildProviders
             return Task.FromResult("N/A");
         }
 
-        public Task<List<BuildRecommendation.BuildRecommendation>> GetBuildRecommendationsAsync(string championName, string? role = null)
+        public Task<List<BuildRecommendation>> GetBuildRecommendationsAsync(string championName, string? role = null)
         {
             // This provider is for live games, so we need a summoner name
             throw new System.NotImplementedException();
         }
 
-        public Task<List<BuildRecommendation.BuildRecommendation>> GetCounterBuildRecommendationsAsync(string championName, string opponentName, string? role = null)
+        public Task<List<BuildRecommendation>> GetCounterBuildRecommendationsAsync(string championName, string opponentName, string? role = null)
         {
             // This provider is for live games, so we need a summoner name
+            throw new System.NotImplementedException();
+        }
+
+        public Task<List<BuildRecommendation>> GetLiveGameBuildRecommendationsAsync(string region, string summonerName)
+        {
+            // Implementation for live game build recommendations
             throw new System.NotImplementedException();
         }
     }

@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Assert = Xunit.Assert;
 using LeagueBuildTool.Core;
 
 namespace LeagueBuildTool.Tests.Services
