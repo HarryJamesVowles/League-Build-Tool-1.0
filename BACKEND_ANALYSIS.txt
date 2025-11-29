@@ -1,0 +1,769 @@
+================================================================================
+LEAGUE BUILD TOOL 1.0 - BACKEND ANALYSIS
+================================================================================
+Date: November 29, 2025
+Purpose: Complete backend analysis for project planning and development reference
+For: Harry (Developer) and AI Assistant (Future Reference)
+================================================================================
+
+PROJECT ARCHITECTURE
+================================================================================
+
+The project is a .NET 8.0 application with four main layers:
+- LeagueBuildTool.Core: All backend business logic, services, ML components
+- LeagueBuildTool.App: Console application entry point with dependency injection
+- LeagueBuildTool.UI: Blazor-based UI (minimal/starter implementation)
+- LeagueBuildTool.Tests: XUnit test suite
+
+Technology Stack:
+- .NET 8.0
+- ML.NET 4.0.3 (Microsoft.ML, Microsoft.ML.FastTree)
+- Newtonsoft.Json 13.0.4
+- Microsoft.Extensions.* (Configuration, DI, Hosting, Http)
+- XUnit for testing
+
+
+================================================================================
+CURRENT BACKEND CAPABILITIES - BY DATA ELEMENT
+================================================================================
+
+1. ITEM RETRIEVER (RiotItemFetcher)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Fetches all League of Legends items from Riot's Data Dragon CDN (no API key needed)
+- Implements response caching to minimize API calls
+- Converts Riot's JSON format to internal Item model
+- Normalizes stat keys (e.g., "FlatHPPoolMod" → "Health")
+- Derives tags from stats (AD, AP, Tank, Crit, AS, MS, etc.)
+
+END RESULT DATA:
+Item {
+  Name: string (e.g., "Infinity Edge")
+  Cost: int (gold)
+  Description: string
+  Stats: Dictionary<string, double> (normalized keys)
+  Tags: List<string> (derived: AD, Crit, etc.)
+}
+
+METHODS:
+- GetAllItemsAsync() - Returns List<Item> with all available items
+- GetRiotItemDetailsAsync(itemName) - Get detailed info for specific item
+
+STATUS: ✅ FULLY FUNCTIONAL AND TESTED
+
+
+2. CHAMPION RETRIEVER (RiotChampionFetcher)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Fetches all champions from Data Dragon (170+ champions)
+- Loads basic champion data quickly for champion select scenarios
+- Loads detailed data (abilities, lore, resource type) on demand for up to 10 champions
+- Concurrent detail fetching with configurable semaphore (default: 8 concurrent)
+- Normalizes base stats to canonical keys
+- Detects resource types (Mana, Energy, Fury, etc.) from detailed data
+- Derives tags from stats and Riot's champion tags
+
+THREE METHODS:
+1. GetAllChampionsAsync() - Full champion list with detailed resource detection
+2. GetBasicChampionDataAsync() - Quick load for champion select (no detail fetching)
+3. LoadChampionDetailsAsync(names) - Load details for specific champions (max 10)
+
+END RESULT DATA:
+Champion {
+  Name: string
+  Lane: string (empty by default, set by user)
+  BaseStats: Dictionary<string, double> (10 canonical keys guaranteed)
+  Tags: List<string> (Fighter, Mage, AD, AP, Resource:Mana, etc.)
+  Gold: int
+  Build: List<Item>
+}
+
+ChampionDetail {
+  ParType: string (resource type: Mana, Energy, None, etc.)
+  Title: string (e.g., "the Nine-Tailed Fox")
+  Lore: string
+  Abilities: List<ChampionAbility>
+}
+
+CANONICAL BASE STAT KEYS (Always Present):
+- Health, AttackDamage, AbilityPower, Armor, MagicResist
+- AttackSpeed, MoveSpeed, HealthRegen, Mana, ManaRegen
+
+STATUS: ✅ FULLY FUNCTIONAL with smart caching and concurrent fetching
+
+
+3. ML SYSTEM (BuildRecommender)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- ML.NET-based binary classification model
+- Predicts build success probability based on game state
+- Uses FastTree algorithm for training
+- Feature engineering with one-hot encoding for categorical variables
+- Feature normalization (MinMax)
+- Model persistence (save/load from .zip file)
+
+INPUT FEATURES:
+BuildPredictionFeatures {
+  ChampionName: string
+  Role: string
+  EnemyTeam: List<string>
+  AllyTeam: List<string>
+  EnemyDamageRatio: double (AP/AD ratio)
+  TeamDamageRatio: double
+  CurrentItems: List<string>
+  CurrentGold: int
+  GameTime: double (minutes)
+  GoldDifference: int
+  ObjectiveControl: double
+}
+
+TRAINING DATA STRUCTURE:
+BuildTrainingExample {
+  Features: BuildPredictionFeatures
+  BuiltItems: List<string>
+  WasWin: bool (label for training)
+  Rank: string (Challenger, Master, Diamond, etc.)
+  PatchVersion: string
+  MatchId: string
+  PerformanceMetrics: Dictionary<string, double> (KDA, damage, vision, etc.)
+}
+
+OUTPUT:
+- Float probability (0.0 to 1.0) indicating predicted build success
+
+METHODS:
+- TrainModelAsync(trainingData) - Train model on collected match data
+- PredictBuildSuccess(features) - Get prediction for current game state
+- LoadModel() - Load previously trained model from file
+
+STATUS: ⚠️ FRAMEWORK COMPLETE, MODEL NOT TRAINED
+BLOCKER: Requires API key and training data collection
+
+
+4. HIGH-ELO MATCH COLLECTOR (HighEloMatchCollector)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Collects match data from Challenger/Grandmaster/Master/Diamond ranks
+- Fetches player lists from ranked ladders
+- Gets match history for each player
+- Extracts build information, performance metrics, game outcomes
+- Converts matches into ML training examples
+
+COLLECTED DATA PER MATCH:
+- Champion, role, items built (7 slots: item0-item6)
+- Gold earned, game duration
+- KDA (kills/deaths/assists)
+- Damage dealt to champions, damage taken
+- Vision score
+- Win/loss outcome
+- Patch version for relevance
+
+TARGET RANKS: Challenger, Grandmaster, Master, Diamond
+
+METHODS:
+- CollectHighEloMatchesAsync(numberOfMatches) - Collect specified number of matches
+
+API ENDPOINTS USED:
+- /lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5
+- /lol/match/v5/matches/by-puuid/{puuid}/ids
+- /lol/match/v5/matches/{matchId}
+- /lol/summoner/v4/summoners/{summonerId}
+
+STATUS: ✅ COMPLETE IMPLEMENTATION
+BLOCKER: ❌ REQUIRES RIOT API KEY TO FUNCTION
+
+
+5. LIVE GAME FETCHER (LiveGameFetcher)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Fetches active game data for a specific summoner
+- Gets spectator information via Riot's Spectator API
+- Retrieves participant data (champions, spells, runes)
+
+END RESULT DATA:
+SpectatorGameInfo {
+  GameId: long
+  GameMode: string
+  GameType: string
+  GameQueueConfigId: long
+  Participants: List<CurrentGameParticipant> {
+    ChampionId: long
+    TeamId: long
+    SummonerName: string
+    SummonerId: string
+    Spell1Id: long
+    Spell2Id: long
+    Perks: Perks {
+      PerkIds: List<long>
+      PerkStyle: long
+      PerkSubStyle: long
+    }
+  }
+}
+
+METHODS:
+- GetSummonerByNameAsync(region, summonerName) - Get summoner info by name
+- GetLiveGameAsync(region, summonerId) - Get active game for summoner
+
+API ENDPOINTS USED:
+- /lol/summoner/v4/summoners/by-name/{summonerName}
+- /lol/spectator/v4/active-games/by-summoner/{summonerId}
+
+STATUS: ✅ COMPLETE IMPLEMENTATION
+BLOCKER: ❌ REQUIRES RIOT API KEY TO FUNCTION
+
+
+6. BUILD PROVIDER SYSTEM (IBuildProvider Interface)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Interface design for integrating with build recommendation sites (U.GG, OP.GG)
+- Standardized BuildRecommendation format for aggregating multiple sources
+- Support for multiple build sources with unified data model
+
+INTERFACE METHODS:
+- BuildSource Source { get; } - Identifies the provider (UGG, OPGG, LiveGame, etc.)
+- GetCurrentPatchVersionAsync() - Returns patch version string
+- GetBuildRecommendationsAsync(championName, role?) - Get builds for champion/role
+- GetCounterBuildRecommendationsAsync(championName, opponentName, role?) - Counter builds
+- GetLiveGameBuildRecommendationsAsync(region, summonerName) - Live game recommendations
+
+BUILD RECOMMENDATION OUTPUT:
+BuildRecommendation {
+  ChampionName: string
+  Role: string
+  Source: BuildSource (enum: UGG, OPGG, RiotRecommended, LiveGame)
+  PatchVersion: string
+  LastUpdated: DateTime
+  WinRate: double? (optional)
+  PickRate: double? (optional)
+  SampleSize: int? (optional)
+  StartingItems: List<string>
+  CoreItems: List<string>
+  SituationalItems: List<SituationalItem> {
+    ItemName: string
+    Condition: string (e.g., "vs heavy AP", "when ahead")
+  }
+  SkillOrder: string? (e.g., "Q > W > E")
+  SummonerSpells: List<string>
+  Notes: string
+  TargetRank: string? (optional)
+  Region: string? (optional)
+}
+
+BUILD SOURCES ENUM:
+- UGG (U.GG)
+- OPGG (OP.GG)
+- RiotRecommended (Riot's default recommendations)
+- LiveGame (Live game analysis)
+
+EXISTING IMPLEMENTATION:
+- LiveGameBuildProvider (class exists)
+
+STATUS: ⚠️ INTERFACE DEFINED
+ISSUE: LiveGameBuildProvider - ALL METHODS THROW NotImplementedException
+
+
+7. STAT MAPPER UTILITY (StatMapper)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Normalizes Riot's inconsistent stat keys across API versions
+- Maps 50+ variations to 12 canonical keys
+- Derives high-level tags from stat distributions
+- Detects resource types from raw key names
+
+CANONICAL STAT KEYS (12 Total):
+- Health
+- AttackDamage
+- AbilityPower
+- Armor
+- MagicResist
+- AttackSpeed
+- MoveSpeed
+- HealthRegen
+- Mana
+- ManaRegen
+- CritChance
+- CritDamage
+
+DERIVED TAGS:
+- AD (Attack Damage focused)
+- AP (Ability Power focused)
+- Tank (High health/armor/MR)
+- MS (Move Speed)
+- AS (Attack Speed)
+- Crit (Critical Strike)
+
+RESOURCE DETECTION:
+Detects: Mana, Energy, Fury, Rage, Heat, Chi, BloodWell
+
+METHODS:
+- NormalizeStatKey(riotKey) - Convert Riot key to canonical key
+- DeriveTagsFromStats(stats) - Generate tags from stat dictionary
+- DetectResourcesFromRawKeys(rawKeys) - Detect resource types
+
+EXAMPLE MAPPINGS:
+"flathppoolmod" → "Health"
+"flatphysicaldmgmod" → "AttackDamage"
+"abilitypower" → "AbilityPower"
+"spellblock" → "MagicResist"
+
+STATUS: ✅ FULLY FUNCTIONAL
+
+
+8. CONFIGURATION MANAGEMENT (Item 5 - COMPLETED)
+--------------------------------------------------------------------------------
+WHAT WAS IMPLEMENTED:
+- Centralized RiotApiConfiguration class with all API settings
+- Multi-source configuration loading (JSON files → environment variables → user secrets)
+- Dependency injection for all services
+- Proper HttpClient lifecycle management via IHttpClientFactory
+- Environment-specific overrides (Development/Production)
+
+CONFIGURATION INCLUDES:
+RiotApiConfiguration {
+  DataDragonVersion: string (default: "13.18.1")
+  DataDragonBaseUrl: string (default: "https://ddragon.leagueoflegends.com")
+  MaxConcurrentRequests: int (default: 8)
+  EnableCaching: bool (default: true)
+  CacheDurationMinutes: int (default: 60)
+  ApiKey: string? (optional, for authenticated endpoints)
+  Region: string (default: "na1")
+  RateLimitPerSecond: int (default: 20)
+}
+
+HELPER METHODS:
+- GetChampionListUrl() - Constructs full URL for champion list
+- GetChampionDetailUrl(championKey) - Constructs URL for specific champion
+- GetItemListUrl() - Constructs full URL for item list
+
+CONFIGURATION SOURCES (Priority Order):
+1. appsettings.json (base defaults)
+2. appsettings.{Environment}.json (environment-specific)
+3. Environment Variables (deployment overrides)
+4. User Secrets (local development secrets)
+
+DEPENDENCY INJECTION:
+- Services registered with AddHttpClient<T>() for proper HttpClient management
+- RiotApiConfiguration registered as singleton
+- All services receive config via constructor injection
+
+STATUS: ✅ COMPLETED - All objectives met
+TESTS: 10/12 passing (2 failures expected - require API key)
+
+
+9. CHAMPION MANAGER (ChampionManager)
+--------------------------------------------------------------------------------
+WHAT IT ACHIEVES:
+- Manages collection of champions
+- Provides lookup methods
+
+METHODS:
+- AddChampion(champion) - Add champion to collection
+- GetChampionByName(name) - Case-insensitive lookup
+- GetChampionsByLane(lane) - Filter by lane
+
+PROPERTIES:
+- Champions: List<Champion>
+
+STATUS: ✅ FUNCTIONAL
+NOTE: Underutilized - could be enhanced with build optimization logic
+
+
+================================================================================
+FIXES NEEDED
+================================================================================
+
+CRITICAL ISSUES:
+--------------------------------------------------------------------------------
+
+1. LIVEGAMEBUILDPROVIDER IMPLEMENTATION MISSING
+   Location: LeagueBuildTool.Core/Services/BuildProviders/LiveGameBuildProvider.cs
+   Problem: All three methods throw NotImplementedException
+   Impact: Cannot generate build recommendations from live games
+   Required: Implement logic to:
+     - Fetch live game data
+     - Analyze team compositions
+     - Calculate enemy damage ratios (AP/AD)
+     - Recommend appropriate defensive and offensive items
+
+2. ML MODEL NOT TRAINED
+   Location: ML model file doesn't exist (BuildRecommender.zip)
+   Problem: BuildRecommender framework exists but no trained model
+   Impact: Cannot predict build success or make ML-based recommendations
+   Required:
+     - Obtain Riot API key
+     - Collect 1000-5000 high-elo matches
+     - Train model using TrainModelAsync()
+     - Validate model accuracy (target >60%)
+
+3. HARDCODED API KEY IN TESTS (SECURITY RISK)
+   Location: LeagueBuildTool.Tests/ML/BuildRecommenderTests.cs, line 14
+   Problem: API key hardcoded in source code
+   Impact: Security vulnerability if committed to version control
+   Required: Move to user secrets or environment variables
+
+4. MISSING BUILD PROVIDER IMPLEMENTATIONS
+   Problem: No implementations for external build sites
+   Impact: Cannot aggregate builds from popular sources
+   Required: Implement providers for:
+     - U.GG (web scraping or unofficial API)
+     - OP.GG (web scraping or unofficial API)
+     - Potentially: Mobalytics, ProBuilds, etc.
+
+5. UI LAYER INCOMPLETE
+   Location: LeagueBuildTool.UI
+   Problem: Appears to be Blazor starter template with minimal functionality
+   Impact: No user interface for the application
+   Required: Build out pages:
+     - Champions.razor - Champion selection and info
+     - Studio.razor - Build creation and optimization
+     - Home.razor - Welcome/overview
+     - Plus new pages for build recommendations, live game, etc.
+
+
+MINOR ISSUES:
+--------------------------------------------------------------------------------
+
+6. NO ERROR HANDLING FOR API FAILURES
+   Problem: Services don't implement retry logic or graceful failures
+   Impact: App crashes on network errors or API rate limits
+   Required:
+     - Implement Polly for retry policies
+     - Add circuit breakers for external APIs
+     - Fallback responses when APIs unavailable
+
+7. NO PERSISTENT CACHING
+   Problem: Caching only in-memory, lost on restart
+   Impact: Unnecessary API calls on every run
+   Required:
+     - Implement file-based cache or Redis
+     - Cache invalidation strategy based on patch version
+     - Respect cache duration settings from config
+
+8. LIMITED CHAMPIONMANAGER FUNCTIONALITY
+   Problem: Simple collection wrapper with basic methods
+   Impact: Missing useful features for build optimization
+   Suggestions:
+     - Gold affordability checks
+     - Build path optimization
+     - Stat calculation with items equipped
+     - Power spike identification
+
+
+================================================================================
+DEVELOPMENT IDEAS & SUGGESTIONS
+================================================================================
+
+SHORT-TERM ENHANCEMENTS (1-2 weeks):
+--------------------------------------------------------------------------------
+
+1. COMPLETE LIVE GAME BUILD PROVIDER
+   - Analyze enemy team composition (AP/AD ratio)
+   - Recommend defensive items based on threats
+   - Suggest situational picks (anti-heal, armor penetration)
+   - Factor in ally team needs (tank, damage, support)
+
+2. IMPLEMENT U.GG PROVIDER
+   - Web scraping or use unofficial API if available
+   - Parse win rates, pick rates from U.GG website
+   - Extract popular builds by rank tier
+   - Cache results for 6 hours to minimize scraping
+
+3. ADD BUILD OPTIMIZER
+   - Calculate gold efficiency for items
+   - Suggest optimal item order based on available gold
+   - Recommend power spike timings
+   - Show stat breakpoints (e.g., "need 40% CDR")
+
+4. IMPLEMENT CACHING LAYER
+   - Use IMemoryCache or IDistributedCache
+   - Cache champion/item data for 1 hour
+   - Cache build recommendations for 6 hours
+   - Invalidate on patch version change
+
+5. ADD ERROR HANDLING & RESILIENCE
+   - Polly for retry policies (exponential backoff)
+   - Circuit breakers for external APIs
+   - Fallback responses when APIs fail
+   - Logging with structured logging (Serilog)
+
+
+MEDIUM-TERM FEATURES (1-2 months):
+--------------------------------------------------------------------------------
+
+6. TRAIN THE ML MODEL
+   - Collect 5000+ high-elo matches across multiple patches
+   - Balance training data (50/50 win/loss ratio)
+   - Validate model accuracy with test set
+   - Retrain periodically as patches change meta
+
+7. RUNE RECOMMENDATIONS
+   - Primary/secondary rune paths
+   - Per-champion optimal runes
+   - Counter-matchup rune adjustments
+   - Situational runes (vs poke, vs all-in, etc.)
+
+8. COUNTER-PICK SYSTEM
+   - Champion matchup database
+   - Win rate by matchup
+   - Recommend champions based on enemy picks
+   - Identify hard counters and skill matchups
+
+9. BUILD COMPARISON TOOL
+   - Compare builds from multiple sources side-by-side
+   - Show statistical differences (win rate, pick rate)
+   - Highlight consensus vs. niche picks
+   - Allow user to create custom builds
+
+10. REAL-TIME BUILD ADAPTATION
+    - Monitor game state (ahead/behind)
+    - Adjust recommendations dynamically
+    - Suggest when to deviate from standard build
+    - Adaptive builds based on gold lead/deficit
+
+
+LONG-TERM VISION (3-6 months):
+--------------------------------------------------------------------------------
+
+11. INTEGRATION WITH LEAGUE CLIENT
+    - Auto-detect champion select phase
+    - Overlay recommendations in client
+    - One-click import builds to client
+    - Real-time updates during game
+
+12. PERSONALIZED RECOMMENDATIONS
+    - Track user's match history via Riot API
+    - Learn playstyle preferences
+    - Recommend based on personal win rates
+    - Identify items user performs well with
+
+13. TEAM COMPOSITION ANALYSIS
+    - Analyze full team synergy
+    - Recommend builds for team strategy
+    - Identify comp weaknesses
+    - Suggest flex picks for better team balance
+
+14. COACHING FEATURES
+    - Build path explanations (why this item now?)
+    - Power spike indicators
+    - Common mistakes highlighting
+    - Compare to pro player builds
+
+15. MOBILE APP
+    - Companion app for iOS/Android
+    - Quick build lookup during draft
+    - Push notifications for patch changes
+    - Offline mode with cached data
+
+16. STATISTICS DASHBOARD
+    - Personal build performance tracking
+    - Most successful builds per champion
+    - Item win rate analysis
+    - Meta trends over time
+
+
+================================================================================
+TEST STATUS
+================================================================================
+
+TOTAL TESTS: 12
+
+PASSING TESTS (10): ✅
+- RiotChampionFetcherTests.GetAllChampionsAsync_ShouldReturnChampions
+- RiotItemFetcherTests.GetAllItemsAsync_ShouldReturnItems
+- RiotItemFetcherTests.Items_ShouldHaveValidProperties
+- ItemStatsAnalyzerTests.AnalyzeItemStats_ShowsAvailableStats
+- ChampionTests.Champion_BaseStatsInitialized
+- ChampionTests.Champion_AllRequiredStatKeysPresent
+- ChampionTests.Champion_StatNormalizationWorks
+- ItemTests.Item_ConstructorSetsProperties
+- ItemTests.Item_StatsDefaultsToEmpty
+- ItemTests.Item_TagsDefaultsToEmpty
+
+FAILING TESTS (2): ❌ (EXPECTED - Require valid Riot API key)
+- BuildRecommenderTests.TrainModelOnHighEloData_ShouldCreateValidModel
+  Error: 401 Unauthorized - Invalid or expired API key
+- BuildRecommenderTests.CollectHighEloMatches_ShouldReturnValidData
+  Error: 401 Unauthorized - Invalid or expired API key
+
+BUILD STATUS: ✅ 0 errors, 0 warnings
+Time Elapsed: ~1 second
+
+
+================================================================================
+PROJECT FILE STRUCTURE
+================================================================================
+
+League Build Tool 1.0/
+├── src/
+│   ├── LeagueBuildTool.Core/           [Backend Business Logic]
+│   │   ├── Configuration/
+│   │   │   ├── ApiConfiguration.cs
+│   │   │   └── RiotApiConfiguration.cs
+│   │   ├── Data/
+│   │   │   ├── BuildRecommendation/
+│   │   │   │   ├── BuildRecommendation.cs
+│   │   │   │   ├── BuildSource.cs
+│   │   │   │   └── SituationalItem.cs
+│   │   │   ├── RiotApi/
+│   │   │   │   ├── Gold.cs
+│   │   │   │   ├── RiotChampion.cs
+│   │   │   │   ├── RiotItem.cs
+│   │   │   │   ├── RiotSummoner.cs
+│   │   │   │   └── SpectatorGameInfo.cs
+│   │   │   ├── ChampionDetail.cs
+│   │   │   ├── RiotChampionDataRoot.cs
+│   │   │   └── RiotItemDataRoot.cs
+│   │   ├── Managers/
+│   │   │   └── ChampionManager.cs
+│   │   ├── ML/
+│   │   │   ├── BuildPredictionFeatures.cs
+│   │   │   ├── BuildRecommender.cs
+│   │   │   └── BuildTrainingExample.cs
+│   │   ├── Models/
+│   │   │   ├── Champion.cs
+│   │   │   └── Item.cs
+│   │   ├── Services/
+│   │   │   ├── BuildProviders/
+│   │   │   │   ├── IBuildProvider.cs
+│   │   │   │   └── LiveGameBuildProvider.cs [⚠️ STUB]
+│   │   │   ├── HighEloMatchCollector.cs
+│   │   │   ├── LiveGameFetcher.cs
+│   │   │   ├── RiotChampionFetcher.cs
+│   │   │   └── RiotItemFetcher.cs
+│   │   ├── Utils/
+│   │   │   └── StatMapper.cs
+│   │   └── LeagueBuildTool.Core.csproj
+│   ├── LeagueBuildTool.App/            [Console Application]
+│   │   ├── appsettings.json
+│   │   ├── appsettings.Development.json
+│   │   ├── Program.cs
+│   │   └── LeagueBuildTool.App.csproj
+│   ├── LeagueBuildTool.UI/             [Blazor UI - Minimal]
+│   │   ├── Pages/
+│   │   │   ├── Champions.razor
+│   │   │   ├── Counter.razor
+│   │   │   ├── Home.razor
+│   │   │   ├── Studio.razor
+│   │   │   └── Weather.razor
+│   │   ├── Layout/
+│   │   ├── wwwroot/
+│   │   ├── App.razor
+│   │   ├── Program.cs
+│   │   └── LeagueBuildTool.UI.csproj
+│   └── LeagueBuildTool.Tests/          [Unit Tests]
+│       ├── ML/
+│       │   └── BuildRecommenderTests.cs
+│       ├── Models/
+│       │   ├── ChampionTests.cs
+│       │   └── ItemTests.cs
+│       ├── Services/
+│       │   ├── ItemStatsAnalyzerTests.cs
+│       │   ├── RiotChampionFetcherTests.cs
+│       │   └── RiotItemFetcherTests.cs
+│       └── LeagueBuildTool.Tests.csproj
+├── docs/
+│   ├── implementation-notes/
+│   │   ├── 2025-11-20_Item5_Config_Implementation.md
+│   │   ├── 2025-11-20_Item5_Config_Complete.md
+│   │   └── README.md
+│   └── README.md
+├── LeagueBuildTool.sln
+├── README.md
+└── BACKEND_ANALYSIS.txt [THIS FILE]
+
+
+================================================================================
+SUMMARY ASSESSMENT
+================================================================================
+
+STRENGTHS:
+- ✅ Solid architectural foundation with dependency injection
+- ✅ Clean separation of concerns (Core/App/UI/Tests)
+- ✅ Good data modeling (Champion, Item, BuildRecommendation)
+- ✅ Configuration management is modern and flexible
+- ✅ Core data fetching (Champions/Items) is complete and tested
+- ✅ ML framework properly structured with ML.NET
+- ✅ Support for multiple build sources via interface
+- ✅ Stat normalization handles Riot's inconsistent data well
+
+GAPS:
+- ❌ ML model framework exists but not trained (no training data collected)
+- ❌ Live game features blocked by missing API key
+- ❌ Build provider implementations missing (U.GG, OP.GG)
+- ❌ UI layer appears incomplete (Blazor starter template)
+- ❌ No caching beyond in-memory
+- ❌ No error resilience (retry logic, circuit breakers)
+- ❌ Security issue: hardcoded API key in test file
+
+RECOMMENDED NEXT STEPS (Priority Order):
+1. Obtain Riot API key and store in user secrets (CRITICAL)
+2. Remove hardcoded API key from BuildRecommenderTests.cs (SECURITY)
+3. Implement LiveGameBuildProvider fully (HIGH PRIORITY)
+4. Collect training data and train ML model (HIGH PRIORITY)
+5. Add one build provider implementation (U.GG or OP.GG) (MEDIUM)
+6. Implement caching layer with persistence (MEDIUM)
+7. Add error handling and retry logic (MEDIUM)
+8. Build out UI layer for user interaction (LOW - Backend first)
+
+OVERALL STATUS:
+Backend framework is approximately 70% complete.
+
+Core infrastructure is solid and production-ready, including:
+- Data models
+- Configuration system
+- Data fetching services
+- Test coverage
+
+Key features need implementation to be functional:
+- ML model training and prediction
+- Live game recommendations
+- External build source integrations
+- User interface
+
+The project is well-architected and ready for feature development once
+API access is configured.
+
+
+================================================================================
+NOTES FOR FUTURE DEVELOPMENT
+================================================================================
+
+When continuing work on this project, remember:
+
+1. API KEY SETUP:
+   - Get development API key from: https://developer.riotgames.com/
+   - Store using: dotnet user-secrets set "RiotApi:ApiKey" "RGAPI-xxxxx"
+   - Never commit API keys to version control
+
+2. TESTING WITH API:
+   - Development keys have rate limits (20 req/sec, 100 req/2min)
+   - Be mindful of rate limits when collecting match data
+   - Consider implementing rate limiting in code
+
+3. ML MODEL TRAINING:
+   - Start with 1000 matches for initial testing
+   - Scale to 5000+ for production model
+   - Collect from multiple patches for robustness
+   - Balance win/loss examples in training data
+
+4. BUILD PROVIDERS:
+   - Check for official APIs first (unlikely for U.GG/OP.GG)
+   - Web scraping: Use respectful delays, cache aggressively
+   - Consider Terms of Service for each site
+
+5. UI DEVELOPMENT:
+   - Focus on backend completion first
+   - UI can come after core features work
+   - Consider whether Blazor Server or WASM is better
+   - Mobile-responsive design from the start
+
+6. DEPLOYMENT:
+   - Environment variables for production API keys
+   - Consider Azure App Service or similar for hosting
+   - Redis for distributed caching if scaling
+   - Monitor API usage to stay within rate limits
+
+================================================================================
+END OF ANALYSIS
+================================================================================

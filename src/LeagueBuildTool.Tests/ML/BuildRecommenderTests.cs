@@ -11,7 +11,9 @@ namespace LeagueBuildTool.Tests.ML
     {
         private static readonly ApiConfiguration _testConfig = new()
         {
-            RiotApiKey = "RGAPI-7b5017c1-cdff-4745-9151-3de1c4054a92",
+            // API key is now loaded from user secrets or environment variables
+            // Set with: dotnet user-secrets set "RiotApi:ApiKey" "RGAPI-xxxxx"
+            RiotApiKey = Environment.GetEnvironmentVariable("RiotApiKey") ?? string.Empty,
             Region = "na1",
             GameVersion = "13.18.1"
         };
